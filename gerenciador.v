@@ -2,10 +2,19 @@ module gerenciador(
     input clk,
     input reset,
     input [31:0] entrada,
-    input pronto_coprocessador,
-    input [224:0] matriz_C,
     output reg [31:0] saida
 );
+
+    // Instância do coprocessador
+    coprocessador cop (
+        .clk(clk),
+        .rst(reset),
+        .op(opcode),
+        .matriz1(matriz1),
+        .matriz2(matriz2),
+        .matrizresult(matriz_C),
+        .done(done)
+    );
 
     // Estados
     parameter ESPERA  = 2'b00;
@@ -19,12 +28,17 @@ module gerenciador(
     reg [4:0] indice_envio;
     reg [2:0] i_envio;
     reg [2:0] opcode;
+
     reg [7:0] matrizA [0:24];
     reg [7:0] matrizB [0:24];
     reg [8:0] matrizC [0:24];
 
+    reg [199:0] matriz1, matriz2;
+    wire [224:0] matriz_C;
+
     reg leu;
     reg carregouC;
+    wire done;
 
     wire [7:0] valA = entrada[11:4];
     wire [7:0] valB = entrada[19:12];
@@ -49,7 +63,7 @@ module gerenciador(
                 proximo_estado = (indice == 24 && !flag_HPS) ? CALCULO : LEITURA;
 
             CALCULO:
-                proximo_estado = (pronto_coprocessador && carregouC) ? ENVIO : CALCULO;
+                proximo_estado = (done && carregouC) ? ENVIO : CALCULO;
 
             ENVIO:
                 proximo_estado = (i_envio == 8 && entrada[30] && !saida[30]) ? ESPERA : ENVIO;
@@ -68,7 +82,6 @@ module gerenciador(
             i_envio <= 0;
             indice_envio <= 0;
             carregouC <= 0;
-				
         end else begin
             case (estado_atual)
                 ESPERA: begin
@@ -93,12 +106,22 @@ module gerenciador(
                             indice <= indice + 1;
                         else
                             indice <= 0;
+
+                        // Montar matriz1 e matriz2 após a leitura completa
+                        if (indice == 24) begin
+                            integer k;
+                            for (k = 0; k < 25; k = k + 1) begin
+                                matriz1[k*8 +: 8] <= matrizA[k];
+                                matriz2[k*8 +: 8] <= matrizB[k];
+                            end
+                        end
+
                         leu <= 0;
                     end
                 end
 
                 CALCULO: begin
-                    if (pronto_coprocessador && !carregouC) begin
+                    if (done && !carregouC) begin
                         integer j;
                         for (j = 0; j < 25; j = j + 1) begin
                             matrizC[j] <= matriz_C[j*9 +: 9];

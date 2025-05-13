@@ -231,11 +231,11 @@ wire [31:0] saida;
 assign stm_hw_events    = {{3{1'b0}},SW, fpga_led_internal, fpga_debounced_buttons};
 
 
-
-soma inst1(
-.clk(CLOCK_50),
-.entrada(dados),
-.saida(saida)
+gerenciador inst_gerenciador (
+    .clk               (CLOCK_50), // coloque o sinal de clock aqui
+    .reset             (), // coloque o sinal de reset aqui
+    .entrada           (dados), // coloque a entrada de 32 bits aqui
+    .saida             (saida)  // saída de 32 bits
 );
 
 assign LEDR = saida[9:0];
@@ -244,7 +244,7 @@ soc_system u0 (
     .clk_clk                               ( CLOCK_50           ),      //                            clk.clk
     .reset_reset_n                         ( hps_fpga_reset_n   ),      //                          reset.reset_n
 	 
-	 .entrada_external_connection_export    (entrada),    //  FPGA TO HPS
+	 .entrada_external_connection_export    (saida),    //  FPGA TO HPS
     .saida_external_connection_export      (dados),       //  HPS TO FPGA
     
 	 
