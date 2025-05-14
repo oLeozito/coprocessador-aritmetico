@@ -53,4 +53,12 @@ void enviar_valores_AB(uint8_t valorA, uint8_t valorB, uint8_t opcode) {
     while ((*reg_status & 0x2) != 0);
 }
 
+// extern void enviar_valores_AB(uint8_t valorA, uint8_t valorB, uint8_t opcode);
+
+void enviar_matrizes_completas(uint8_t A[25], uint8_t B[25], uint8_t opcode) {
+    for (int i = 0; i < 25; i++) {
+        enviar_valores_AB(A[i], B[i], opcode);
+    }
+}
+
 
