@@ -6,8 +6,8 @@
 .global liberar_memoria
 .type liberar_memoria, %function
 
-.equ LW_BRIDGE_BASE, 0xFF200
-.equ MAP_SIZE, 0x1000
+.equ LW_BRIDGE_BASE, 0xFF200000
+.equ MAP_SIZE, 0x00001000
 .equ PROT_READ, 1
 .equ PROT_WRITE, 2
 .equ MAP_SHARED, 1
@@ -27,9 +27,13 @@ mapear_memoria:
     svc     #0
     
     cmp     r0, #0             @ Se fd < 0, erro
-    blt     mapear_error
+    bge     mapear_error
     
+    mov r4, r0
+    
+fd_ok:
     mov     r4, r0             @ Salva fd
+    
     
     @ Chama mmap
     mov     r0, #0             @ NULL
@@ -58,7 +62,7 @@ mapear_close:
     svc     #0
     
 mapear_error:
-    mov     r0, #0             @ Retorna NULL
+    mvn     r0, #0             @ Retorna NULL
     pop     {r4-r7, pc}
 
 liberar_memoria:

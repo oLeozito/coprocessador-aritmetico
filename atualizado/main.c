@@ -11,11 +11,13 @@ int main() {
     
     if (mem == NULL) {
         perror("Erro ao alocar estrutura de mapeamento");
+        printf("Errno: %d\n", errno);
         return EXIT_FAILURE;
     }
     
-    if (mem->map_base == MAP_FAILED || mem->map_base == NULL) {
+    if (mem->map_base == MAP_FAILED) {
         perror("Erro no mapeamento de memoria");
+        printf("Endereço retornado :%p\n", mem->map_base);
         liberar_memoria(mem);
         return EXIT_FAILURE;
     }
