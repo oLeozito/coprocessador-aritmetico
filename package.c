@@ -26,3 +26,31 @@ void enviar_dado(uint32_t dado) {
 }
 
 
+#define OPCODE_SHIFT  28
+#define VALOR_A_SHIFT 20
+#define VALOR_B_SHIFT 12
+
+void enviar_valores_AB(uint8_t valorA, uint8_t valorB, uint8_t opcode) {
+    uint32_t dado = 0;
+
+    // Monta o pacote
+    dado |= (opcode & 0x7) << OPCODE_SHIFT;   // 3 bits para opcode
+    dado |= (valorA & 0xFF) << VALOR_A_SHIFT; // 8 bits para A
+    dado |= (valorB & 0xFF) << VALOR_B_SHIFT; // 8 bits para B
+    dado |= FLAG_ESCREVEU;                    // Bit 31 = 1 (escreveu)
+
+    // Handshake padrão
+    *reg_dados = dado;
+    *reg_status |= 0x1; // Set bit 0: "escreveu"
+
+    // Espera FPGA ler (bit 1 = 1)
+    while ((*reg_status & 0x2) == 0);
+
+    // Zera bit de "escreveu"
+    *reg_status &= ~0x1;
+
+    // Espera FPGA zerar bit de "leu"
+    while ((*reg_status & 0x2) != 0);
+}
+
+
