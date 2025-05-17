@@ -9,6 +9,24 @@
 #define LEDR_BASE        0x00000000
 #define RETURN_BASE      0x00000010
 
+void print_progress_bar(int current, int total) {
+    int width = 25;
+    int filled;
+    int i;
+
+    filled = (current * width) / total;
+
+    printf("\r[");
+    for (i = 0; i < width; i++) {
+        if (i < filled)
+            printf("#");
+        else
+            printf(" ");
+    }
+    printf("] %d%%", (current * 100) / total);
+    fflush(stdout);
+}
+
 int main(void) {
     volatile uint32_t *LEDR_ptr;
     volatile uint32_t *RETURN_ptr;
@@ -46,52 +64,58 @@ int main(void) {
 
     LEDR_ptr   = (uint32_t *) (LW_virtual + LEDR_BASE);
     RETURN_ptr = (uint32_t *) (LW_virtual + RETURN_BASE);
-    int i = 0;
 
-    *LEDR_ptr |= (0 << 31); // Zera o bit 31 antes de começar, pra evitar erros.
+    *LEDR_ptr |= (1 << 29);
+    *LEDR_ptr &= ~(1 << 31);
 
-    for (i; i < 25; i++) {
+    int i;
+    uint8_t valA;
+    uint8_t valB;
+    uint32_t word;
 
+    printf("Enviando dados para o coprocessador:\n");
+
+    for (i = 0; i < 25; i++) {
         while (((*RETURN_ptr) & (1 << 31)) == 1);
 
-        uint8_t valA = matrizA[i / 5][i % 5];
-        uint8_t valB = matrizB[i / 5][i % 5];
+        valA = matrizA[i / 5][i % 5];
+        valB = matrizB[i / 5][i % 5];
 
-        uint32_t word = 0;
-        word |= (valA & 0xFF);            // bits 7:0
-        word |= ((valB & 0xFF) << 8);     // bits 15:8
-        word |= (0b111 << 16);            // bits 18:16 = opcode
+        word = 0;
+        word |= (valA & 0xFF);
+        word |= ((valB & 0xFF) << 8);
+        word |= (0b111 << 16);
 
-        *LEDR_ptr = word;  // Envia dados (sem bit 31)
-        printf("LEDR_ptr = 0x%08X\n", *LEDR_ptr);
-        printf("indice: %d\n",i);
-
-        // Agora ativa o bit 31 separadamente
+        *LEDR_ptr = word;
         *LEDR_ptr |= (1 << 31);
-        printf("flag = 1\n");
-        // Espera resposta do coprocessador (bit 31 de retorno = 1)
-        while (((*RETURN_ptr) & (1 << 31)) == 0){};
 
-        // Limpa bit 31 do LEDR
+        while (((*RETURN_ptr) & (1 << 31)) == 0) {};
         *LEDR_ptr &= ~(1 << 31);
-        printf("flag = 0\n");
 
-        usleep(100000); // pequena pausa
+        print_progress_bar(i + 1, 25);
+        usleep(100000);
     }
 
-    // AQUI
+    printf("\nDados enviados com sucesso!\n");
+
+    printf("\n(Processando dados)\n\n");
+
+    printf("Recebendo dados de volta:\n");
+
     uint8_t matrizC[5][5];
     int indice = 0;
+    uint32_t dado;
+    uint8_t val1, val2, val3, val;
 
     while (indice < 25) {
-        while (((*RETURN_ptr) & (1 << 30)) == 0); // Espera bit 30 setado
+        while (((*RETURN_ptr) & (1 << 30)) == 0);
 
-        uint32_t dado = *RETURN_ptr;
+        dado = *RETURN_ptr;
 
         if (indice <= 21) {
-            uint8_t val1 = (dado >> 0) & 0xFF;
-            uint8_t val2 = (dado >> 8) & 0xFF;
-            uint8_t val3 = (dado >> 16) & 0xFF;
+            val1 = (dado >> 0) & 0xFF;
+            val2 = (dado >> 8) & 0xFF;
+            val3 = (dado >> 16) & 0xFF;
 
             matrizC[indice / 5][indice % 5] = val1;
             matrizC[(indice + 1) / 5][(indice + 1) % 5] = val2;
@@ -99,21 +123,31 @@ int main(void) {
 
             indice += 3;
         } else {
-            uint8_t val = (dado >> 0) & 0xFF;
+            val = (dado >> 0) & 0xFF;
             matrizC[4][4] = val;
             indice++;
         }
 
-        *LEDR_ptr |= (1 << 30); // Sinaliza para a FPGA que já leu
+        *LEDR_ptr |= (1 << 30);
+        while (((*RETURN_ptr) & (1 << 30)) != 0);
+        *LEDR_ptr &= ~(1 << 30);
 
-        while (((*RETURN_ptr) & (1 << 30)) != 0); // Espera a FPGA limpar
-
-        *LEDR_ptr &= ~(1 << 30); // Limpa flag do HPS
+        print_progress_bar(indice > 25 ? 25 : indice, 25);
+        usleep(100000);
     }
 
-    printf("Matriz C recebida com sucesso:\n");
-    
-    // AQUI
+    printf("\nDados recebidos com sucesso!\n\n");
+
+    printf("Matriz Resultante:\n");
+    int k = 0;
+    int j;
+    for (k = 0; k < 5; k++) {
+        j = 0;
+        for (j = 0; j < 5; j++) {
+            printf("%3d ", matrizC[k][j]);
+        }
+        printf("\n");
+    }
 
     munmap(LW_virtual, LW_BRIDGE_SPAN);
     close(fd);
