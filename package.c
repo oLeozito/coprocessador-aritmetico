@@ -20,7 +20,6 @@ void print_progress_bar(int current, int total) {
     filled = (current * width) / total;
 
     printf("\r[");
-    
     for (i = 0; i < width; i++) {
         if (i < filled)
             printf("#");
@@ -49,32 +48,45 @@ void* configurar_mapeamento(int *fd) {
     return virtual;
 }
 
-void enviar_dados_para_fpga(volatile uint32_t *LEDR_ptr, volatile uint32_t *RETURN_ptr,
-                             uint8_t matrizA[5][5], uint8_t matrizB[5][5]) {
+void enviar_dados_para_fpga(volatile uint32_t *LEDR_ptr, uint8_t matrizA[5][5], uint8_t matrizB[5][5], uint8_t data) {
+    // Calcula ponteiro da ponte de retorno via offset (+0x10 bytes / +4 words)
+    volatile uint32_t *RETURN_ptr = LEDR_ptr + 4;
+
     printf("Enviando dados para o coprocessador:\n");
-    int i = 0;
-    for (i; i < 25; i++) {
+
+    for (int i = 0; i < 25; i++) {
+        // Aguarda coprocessador estar pronto
         while (((*RETURN_ptr) & (1 << 31)) == 1);
 
+        // Recupera os valores das matrizes
         uint8_t valA = matrizA[i / 5][i % 5];
         uint8_t valB = matrizB[i / 5][i % 5];
 
+        // Monta a palavra de 32 bits:
+        // bits 0–7   = valA
+        // bits 8–15  = valB
+        // bits 16–21 = data (3 bits tamanho + 3 bits opcode)
         uint32_t word = 0;
         word |= (valA & 0xFF);
         word |= ((valB & 0xFF) << 8);
-        word |= (0b111 << 16);
+        word |= ((data & 0x3F) << 16);  // 6 bits do "data" nos bits 16–21
 
+        // Escreve e sinaliza início da operação
         *LEDR_ptr = word;
         *LEDR_ptr |= (1 << 31);
 
+        // Aguarda final da operação
         while (((*RETURN_ptr) & (1 << 31)) == 0);
-        *LEDR_ptr &= ~(1 << 31);
+        *LEDR_ptr &= ~(1 << 31);  // Limpa o bit de "start"
 
+        // Feedback visual
         print_progress_bar(i + 1, 25);
         usleep(100000);
     }
+
     printf("\nDados enviados com sucesso!\n");
 }
+
 
 void receber_dados_da_fpga(volatile uint32_t *LEDR_ptr, volatile uint32_t *RETURN_ptr,
                             uint8_t matrizC[5][5]) {
@@ -110,9 +122,8 @@ void receber_dados_da_fpga(volatile uint32_t *LEDR_ptr, volatile uint32_t *RETUR
 
 void imprimir_matriz_resultado(uint8_t matrizC[5][5]) {
     printf("Matriz Resultante:\n");
-    int i,j;
-    for (i = 0; i < 5; i++) {
-        for (j = 0; j < 5; j++) {
+    for (int i = 0; i < 5; i++) {
+        for (int j = 0; j < 5; j++) {
             printf("%3d ", matrizC[i][j]);
         }
         printf("\n");
@@ -124,12 +135,14 @@ int main(void) {
     void *LW_virtual = configurar_mapeamento(&fd);
     if (LW_virtual == NULL) return -1;
 
-    volatile uint32_t *LEDR_ptr   = (uint32_t *)(LW_virtual + LEDR_BASE);
-    volatile uint32_t *RETURN_ptr = (uint32_t *)(LW_virtual + RETURN_BASE);
+    // Ponteiro base da FPGA (LEDR)
+    volatile uint32_t *LEDR_ptr = (uint32_t *)(LW_virtual + LEDR_BASE);
 
-    *LEDR_ptr |= (1 << 29);
-    *LEDR_ptr &= ~(1 << 31);
+    // Configura os sinais de controle
+    *LEDR_ptr |= (1 << 29);     // (ex: ativa coprocessador)
+    *LEDR_ptr &= ~(1 << 31);    // Garante que o bit de "start" esteja zerado
 
+    // Matrizes de entrada
     uint8_t matrizA[5][5] = {
         {1, 2, 3, 4, 5},
         {6, 7, 8, 9, 10},
@@ -146,13 +159,23 @@ int main(void) {
         {5, 4, 3, 2, 1}
     };
 
-    uint8_t matrizC[5][5];
+    uint8_t matrizC[5][5]; // Resultado
 
-    enviar_dados_para_fpga(LEDR_ptr, RETURN_ptr, matrizA, matrizB);
+    // Define o valor de "data"
+    // Exemplo: tamanho = 0b000 (5x5 = fixo), opcode = 0b010 (multiplicação)
+    // Então: data = (tamanho << 3) | opcode
+    uint8_t tamanho = 0b000;  // 3 bits
+    uint8_t opcode  = 0b010;  // 3 bits
+    uint8_t data = (tamanho << 3) | (opcode & 0b111);
+
+    // Envia dados para a FPGA (apenas ponteiro base e data são passados)
+    enviar_dados_para_fpga(LEDR_ptr, matrizA, matrizB, data);
     receber_dados_da_fpga(LEDR_ptr, RETURN_ptr, matrizC);
     imprimir_matriz_resultado(matrizC);
 
+    // Finaliza mapeamento
     munmap(LW_virtual, LW_BRIDGE_SPAN);
     close(fd);
     return 0;
 }
+
