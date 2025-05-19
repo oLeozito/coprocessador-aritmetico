@@ -20,6 +20,7 @@ void print_progress_bar(int current, int total) {
     filled = (current * width) / total;
 
     printf("\r[");
+    
     for (i = 0; i < width; i++) {
         if (i < filled)
             printf("#");
@@ -51,7 +52,8 @@ void* configurar_mapeamento(int *fd) {
 void enviar_dados_para_fpga(volatile uint32_t *LEDR_ptr, volatile uint32_t *RETURN_ptr,
                              uint8_t matrizA[5][5], uint8_t matrizB[5][5]) {
     printf("Enviando dados para o coprocessador:\n");
-    for (int i = 0; i < 25; i++) {
+    int i = 0;
+    for (i; i < 25; i++) {
         while (((*RETURN_ptr) & (1 << 31)) == 1);
 
         uint8_t valA = matrizA[i / 5][i % 5];
@@ -108,8 +110,9 @@ void receber_dados_da_fpga(volatile uint32_t *LEDR_ptr, volatile uint32_t *RETUR
 
 void imprimir_matriz_resultado(uint8_t matrizC[5][5]) {
     printf("Matriz Resultante:\n");
-    for (int i = 0; i < 5; i++) {
-        for (int j = 0; j < 5; j++) {
+    int i,j;
+    for (i = 0; i < 5; i++) {
+        for (j = 0; j < 5; j++) {
             printf("%3d ", matrizC[i][j]);
         }
         printf("\n");
@@ -128,11 +131,11 @@ int main(void) {
     *LEDR_ptr &= ~(1 << 31);
 
     uint8_t matrizA[5][5] = {
-    {1, 2, 3, 4, 5},
-    {6, 7, 8, 9, 10},
-    {11, 12, 13, 14, 15},
-    {16, 17, 18, 19, 20},
-    {21, 22, 23, 24, 25}
+        {1, 2, 3, 4, 5},
+        {6, 7, 8, 9, 10},
+        {11, 12, 13, 14, 15},
+        {16, 17, 18, 19, 20},
+        {21, 22, 23, 24, 25}
     };
 
     uint8_t matrizB[5][5] = {
