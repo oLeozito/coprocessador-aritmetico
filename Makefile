@@ -1,19 +1,17 @@
-CC = gcc
-CFLAGS = -Wall -O2
+CC = arm-linux-gnueabihf-gcc
+CFLAGS = -Wall
+ASFLAGS = -mcpu=cortex-a9
 
-TARGET = main
-OBJS = main.o package.o
+all: main
 
-all: $(TARGET)
-
-$(TARGET): $(OBJS)
-	$(CC) $(CFLAGS) -o $(TARGET) $(OBJS)
+main: main.o package.o
+    $(CC) $(CFLAGS) -o $@ $^
 
 main.o: main.c package.h
-	$(CC) $(CFLAGS) -c main.c
+    $(CC) $(CFLAGS) -c $<
 
-package.o: package.c package.h
-	$(CC) $(CFLAGS) -c package.c
+package.o: package.s
+    $(CC) $(ASFLAGS) -c $< -o $@
 
 clean:
-	rm -f *.o $(TARGET)
+    rm -f *.o main
