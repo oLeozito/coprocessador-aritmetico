@@ -88,8 +88,10 @@ void enviar_dados_para_fpga(volatile uint32_t *LEDR_ptr, uint8_t matrizA[5][5], 
 }
 
 
-void receber_dados_da_fpga(volatile uint32_t *LEDR_ptr, volatile uint32_t *RETURN_ptr,
-                            uint8_t matrizC[5][5]) {
+void receber_dados_da_fpga(volatile uint32_t *LEDR_ptr, uint8_t matrizC[5][5]) {
+
+    volatile uint32_t *RETURN_ptr = LEDR_ptr + 4;
+
     printf("\n(Processando dados)\n\n");
     printf("Recebendo dados de volta:\n");
 
@@ -170,7 +172,7 @@ int main(void) {
 
     // Envia dados para a FPGA (apenas ponteiro base e data são passados)
     enviar_dados_para_fpga(LEDR_ptr, matrizA, matrizB, data);
-    receber_dados_da_fpga(LEDR_ptr, RETURN_ptr, matrizC);
+    receber_dados_da_fpga(LEDR_ptr, matrizC);
     imprimir_matriz_resultado(matrizC);
 
     // Finaliza mapeamento
@@ -178,4 +180,3 @@ int main(void) {
     close(fd);
     return 0;
 }
-
