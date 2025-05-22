@@ -3,6 +3,11 @@
 #include <sys/mman.h>
 #include <unistd.h>
 #include <stdint.h>
+#include <unistd.h>
+#include "package.h"
+#include <unistd.h>
+
+
 
 #define LW_BRIDGE_BASE   0xFF200000
 #define LW_BRIDGE_SPAN   0x00005000
@@ -14,6 +19,7 @@ void print_progress_bar(int current, int total) {
     int filled;
     int i;
 
+    if (total == 0) total = 1;
     filled = (current * width) / total;
 
     printf("\r[");
@@ -27,130 +33,78 @@ void print_progress_bar(int current, int total) {
     fflush(stdout);
 }
 
-int main(void) {
-    volatile uint32_t *LEDR_ptr;
-    volatile uint32_t *RETURN_ptr;
-    int fd = -1;
-    void *LW_virtual;
+// void* configurar_mapeamento(int *fd) {
+//     *fd = open("/dev/mem", (O_RDWR | O_SYNC));
+//     if (*fd == -1) {
+//         printf("ERRO: não foi possível abrir \"/dev/mem\"...\n");
+//         return NULL;
+//     }
 
-    uint8_t matrizA[5][5] = {
-        {1, 2, 3, 4, 5},
-        {6, 7, 1, 2, 3},
-        {4, 5, 6, 7, 1},
-        {2, 3, 4, 5, 6},
-        {7, 1, 2, 3, 4}
-    };
+//     void *virtual = mmap(NULL, LW_BRIDGE_SPAN, (PROT_READ | PROT_WRITE),
+//                          MAP_SHARED, *fd, LW_BRIDGE_BASE);
+//     if (virtual == MAP_FAILED) {
+//         printf("ERRO: mmap() falhou...\n");
+//         close(*fd);
+//         return NULL;
+//     }
 
-    uint8_t matrizB[5][5] = {
-        {5, 4, 3, 2, 1},
-        {7, 6, 5, 4, 3},
-        {2, 1, 7, 6, 5},
-        {4, 3, 2, 1, 7},
-        {6, 5, 4, 3, 2}
-    };
+//     return virtual;
+// }
 
-    if ((fd = open("/dev/mem", (O_RDWR | O_SYNC))) == -1) {
-        printf("ERRO: não foi possível abrir \"/dev/mem\"...\n");
-        return -1;
-    }
 
-    LW_virtual = mmap(NULL, LW_BRIDGE_SPAN, (PROT_READ | PROT_WRITE),
-                      MAP_SHARED, fd, LW_BRIDGE_BASE);
-    if (LW_virtual == MAP_FAILED) {
-        printf("ERRO: mmap() falhou...\n");
-        close(fd);
-        return -1;
-    }
-
-    LEDR_ptr   = (uint32_t *) (LW_virtual + LEDR_BASE);
-    RETURN_ptr = (uint32_t *) (LW_virtual + RETURN_BASE);
-
-    *LEDR_ptr |= (1 << 29);
-    *LEDR_ptr &= ~(1 << 31);
-
-    int i;
-    uint8_t valA;
-    uint8_t valB;
-    uint32_t word;
-
-    printf("Enviando dados para o coprocessador:\n");
-
-    for (i = 0; i < 25; i++) {
-        while (((*RETURN_ptr) & (1 << 31)) == 1);
-
-        valA = matrizA[i / 5][i % 5];
-        valB = matrizB[i / 5][i % 5];
-
-        word = 0;
-        word |= (valA & 0xFF);
-        word |= ((valB & 0xFF) << 8);
-        word |= (0b111 << 16);
-
-        *LEDR_ptr = word;
-        *LEDR_ptr |= (1 << 31);
-
-        while (((*RETURN_ptr) & (1 << 31)) == 0) {};
-        *LEDR_ptr &= ~(1 << 31);
-
-        print_progress_bar(i + 1, 25);
-        usleep(100000);
-    }
-
-    printf("\nDados enviados com sucesso!\n");
-
-    printf("\n(Processando dados)\n\n");
-
-    printf("Recebendo dados de volta:\n");
-
-    uint8_t matrizC[5][5];
-    int indice = 0;
-    uint32_t dado;
-    uint8_t val1, val2, val3, val;
-
-    while (indice < 25) {
-        while (((*RETURN_ptr) & (1 << 30)) == 0);
-
-        dado = *RETURN_ptr;
-
-        if (indice <= 21) {
-            val1 = (dado >> 0) & 0xFF;
-            val2 = (dado >> 8) & 0xFF;
-            val3 = (dado >> 16) & 0xFF;
-
-            matrizC[indice / 5][indice % 5] = val1;
-            matrizC[(indice + 1) / 5][(indice + 1) % 5] = val2;
-            matrizC[(indice + 2) / 5][(indice + 2) % 5] = val3;
-
-            indice += 3;
-        } else {
-            val = (dado >> 0) & 0xFF;
-            matrizC[4][4] = val;
-            indice++;
-        }
-
-        *LEDR_ptr |= (1 << 30);
-        while (((*RETURN_ptr) & (1 << 30)) != 0);
-        *LEDR_ptr &= ~(1 << 30);
-
-        print_progress_bar(indice > 25 ? 25 : indice, 25);
-        usleep(100000);
-    }
-
-    printf("\nDados recebidos com sucesso!\n\n");
-
+void imprimir_matriz_resultado(uint8_t matrizC[5][5]) {
     printf("Matriz Resultante:\n");
-    int k = 0;
-    int j;
-    for (k = 0; k < 5; k++) {
-        j = 0;
-        for (j = 0; j < 5; j++) {
-            printf("%3d ", matrizC[k][j]);
+    for (int i = 0; i < 5; i++) {
+        for (int j = 0; j < 5; j++) {
+            printf("%3d ", matrizC[i][j]);
         }
         printf("\n");
     }
+}
 
+int main(void) {
+    int fd = -1;
+    void *LW_virtual = configurar_mapeamento(&fd);
+    if (LW_virtual == NULL) return -1;
+
+    // Ponteiro base da FPGA (LEDR)
+    volatile uint32_t *LEDR_ptr = (uint32_t *)(LW_virtual + LEDR_BASE);
+
+    // Configura os sinais de controle
+    *LEDR_ptr |= (1 << 29);     // (ex: ativa coprocessador)
+    *LEDR_ptr &= ~(1 << 31);    // Garante que o bit de "start" esteja zerado
+
+    // Matrizes de entrada
+    uint8_t matrizA[5][5] = {
+        {1, 2, 3, 4, 5},
+        {6, 7, 8, 9, 10},
+        {11, 12, 13, 14, 15},
+        {16, 17, 18, 19, 20},
+        {21, 22, 23, 24, 25}
+    };
+
+    uint8_t matrizB[5][5] = {
+        {25, 24, 23, 22, 21},
+        {20, 19, 18, 17, 16},
+        {15, 14, 13, 12, 11},0
+    };
+
+    uint8_t matrizC[5][5]; // Resultado
+
+    // Define o valor de "data"
+    // Exemplo: tamanho = 0b000 (5x5 = fixo), opcode = 0b010 (multiplicação)
+    // Então: data = (tamanho << 3) | opcode
+    uint8_t tamanho = 0b000;  // 3 bits
+    uint8_t opcode  = 0b000;  // 3 bits
+    uint8_t data = (tamanho << 3) | (opcode & 0b111);
+
+    // Envia dados para a FPGA (apenas ponteiro base e data são passados)
+    enviar_dados_para_fpga(LEDR_ptr, matrizA, matrizB, data);
+    receber_dados_da_fpga(LEDR_ptr, matrizC);
+    imprimir_matriz_resultado(matrizC);
+
+    // Finaliza mapeamento
     munmap(LW_virtual, LW_BRIDGE_SPAN);
     close(fd);
-
     return 0;
 }
