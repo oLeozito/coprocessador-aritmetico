@@ -1,149 +1,164 @@
-.section .text
 .global enviar_dados_para_fpga
 .global receber_dados_da_fpga
 .global imprimir_matriz_resultado
 
-@ --- enviar_dados_para_fpga ---
-@ Argumentos:
-@   r0: LEDR_ptr (ponteiro para o registrador do FPGA)
-@   r1: matrizA (ponteiro para a matriz 5x5)
-@   r2: matrizB (ponteiro para a matriz 5x5)
-@   r3: data (8 bits)
-enviar_dados_para_fpga:
-    PUSH    {r4-r11, lr}          @ Salva registradores
+.section .text
 
-    MOV     r4, r0                 @ r4 = LEDR_ptr
-    ADD     r5, r4, #16            @ r5 = RETURN_ptr (LEDR_ptr + 4 words)
-    MOV     r6, #0                 @ i = 0
+@ void enviar_dados_para_fpga(volatile uint32_t *LEDR_ptr, uint8_t matrizA[5][5], uint8_t matrizB[5][5], uint8_t data)
+enviar_dados_para_fpga:
+    push    {r4-r11, lr}
+    mov     r4, r0              @ LEDR_ptr
+    mov     r5, r1              @ matrizA
+    mov     r6, r2              @ matrizB
+    uxtb    r7, r3             @ data (8 bits)
+    add     r8, r4, #16         @ RETURN_ptr = LEDR_ptr + 16 bytes
+    mov     r9, #0              @ i = 0
 
 send_loop:
-    @ Aguarda FPGA pronto (bit 31 de RETURN_ptr == 0)
-    wait_ready:
-        LDR     r7, [r5]
-        TST     r7, #(1 << 31)     @ Testa bit 31
-        BNE     wait_ready
+    cmp     r9, #25
+    bge     send_done
 
-    @ Carrega valA e valB das matrizes
-    LDRB    r8, [r1, r6]           @ r8 = matrizA[i]
-    LDRB    r9, [r2, r6]           @ r9 = matrizB[i]
+wait_send_ready:
+    ldr     r10, [r8]
+    tst     r10, #0x80000000    @ Verifica bit 31
+    bne     wait_send_ready
 
-    @ Monta a palavra (valA | valB << 8 | data << 16)
-    ORR     r10, r8, r9, LSL #8
-    ORR     r10, r10, r3, LSL #16
+    ldrb    r0, [r5, r9]        @ valA = matrizA[i]
+    ldrb    r1, [r6, r9]        @ valB = matrizB[i]
 
-    @ Escreve e aciona bit 31
-    STR     r10, [r4]
-    ORR     r10, r10, #(1 << 31)
-    STR     r10, [r4]
+    orr     r10, r0, r1, lsl #8 @ valA | (valB << 8)
+    orr     r10, r10, r7, lsl #16 @ Adiciona data (bits 16-21)
 
-    @ Aguarda operação concluída (bit 31 de RETURN_ptr == 1)
-    wait_done:
-        LDR     r7, [r5]
-        TST     r7, #(1 << 31)
-        BEQ     wait_done
+    str     r10, [r4]           @ Escreve no LEDR
+    ldr     r10, [r4]
+    orr     r10, r10, #0x80000000 @ Seta bit 31
+    str     r10, [r4]
 
-    @ Limpa bit de start
-    BIC     r10, r10, #(1 << 31)
-    STR     r10, [r4]
+wait_send_done:
+    ldr     r10, [r8]
+    tst     r10, #0x80000000
+    bne     wait_send_done
 
-    @ Incrementa índice (i++)
-    ADD     r6, r6, #1
-    CMP     r6, #25
-    BLT     send_loop
+    ldr     r10, [r4]
+    bic     r10, r10, #0x80000000 @ Limpa bit 31
+    str     r10, [r4]
 
-    POP     {r4-r11, pc}           @ Retorna
+    add     r0, r9, #1          @ current = i + 1
+    mov     r1, #25             @ total = 25
+    bl      print_progress_bar
 
-@ --- receber_dados_da_fpga ---
-@ Argumentos:
-@   r0: LEDR_ptr
-@   r1: matrizC (ponteiro para a matriz de saída)
+    ldr     r0, =100000
+    bl      usleep
+
+    add     r9, r9, #1          @ i++
+    b       send_loop
+
+send_done:
+    pop     {r4-r11, pc}
+
+@ void receber_dados_da_fpga(volatile uint32_t *LEDR_ptr, uint8_t matrizC[5][5])
 receber_dados_da_fpga:
-    PUSH    {r4-r10, lr}
-    MOV     r4, r0                 @ r4 = LEDR_ptr
-    ADD     r5, r4, #16            @ r5 = RETURN_ptr
-    MOV     r6, #0                 @ indice = 0
+    push    {r4-r11, lr}
+    mov     r4, r0              @ LEDR_ptr
+    mov     r5, r1              @ matrizC
+    add     r6, r4, #16         @ RETURN_ptr
+    mov     r7, #0              @ indice = 0
 
 receive_loop:
-    @ Aguarda dado válido (bit 30 de RETURN_ptr == 1)
-    wait_valid:
-        LDR     r7, [r5]
-        TST     r7, #(1 << 30)
-        BEQ     wait_valid
+    cmp     r7, #25
+    bge     receive_done
 
-    @ Lê dado e processa
-    LDR     r8, [r5]               @ r8 = dado
-    CMP     r6, #21
-    BGT     last_elements
+wait_receive_ready:
+    ldr     r8, [r6]
+    tst     r8, #0x40000000     @ Verifica bit 30
+    beq     wait_receive_ready
 
-    @ Escreve 3 elementos de uma vez (bits 0-7, 8-15, 16-23)
-    STRB    r8, [r1, r6]           @ matrizC[indice] = dado[0-7]
-    ADD     r6, r6, #1
-    MOV     r9, r8, LSR #8
-    STRB    r9, [r1, r6]           @ matrizC[indice+1] = dado[8-15]
-    ADD     r6, r6, #1
-    MOV     r9, r8, LSR #16
-    STRB    r9, [r1, r6]           @ matrizC[indice+2] = dado[16-23]
-    ADD     r6, r6, #1
-    B       ack
+    ldr     r8, [r6]            @ dado = *RETURN_ptr
 
-last_elements:
-    @ Último elemento (indice 24)
-    STRB    r8, [r1, #24]          @ matrizC[4][4] = dado[0-7]
-    ADD     r6, r6, #1
+    cmp     r7, #21
+    bgt     handle_last
 
-ack:
-    @ Confirma recebimento (ativa bit 30)
-    LDR     r9, [r4]
-    ORR     r9, r9, #(1 << 30)
-    STR     r9, [r4]
+    ubfx    r0, r8, #0, #8      @ Extrai byte 0
+    strb    r0, [r5, r7]        @ matrizC[indice]
+    add     r9, r7, #1
+    ubfx    r0, r8, #8, #8      @ Extrai byte 1
+    strb    r0, [r5, r9]
+    add     r9, r7, #2
+    ubfx    r0, r8, #16, #8     @ Extrai byte 2
+    strb    r0, [r5, r9]
+    add     r7, r7, #3
+    b       update_progress
 
-    @ Aguarda FPGA limpar bit 30
-    wait_ack:
-        LDR     r7, [r5]
-        TST     r7, #(1 << 30)
-        BNE     wait_ack
+handle_last:
+    mov     r0, #24             @ matrizC[4][4]
+    ubfx    r1, r8, #0, #8
+    strb    r1, [r5, r0]
+    add     r7, r7, #1
 
-    @ Limpa bit de confirmação
-    BIC     r9, r9, #(1 << 30)
-    STR     r9, [r4]
+update_progress:
+    ldr     r0, [r4]
+    orr     r0, r0, #0x40000000 @ Seta bit 30
+    str     r0, [r4]
 
-    CMP     r6, #25
-    BLT     receive_loop
+wait_clear:
+    ldr     r0, [r6]
+    tst     r0, #0x40000000
+    bne     wait_clear
 
-    POP     {r4-r10, pc}
+    ldr     r0, [r4]
+    bic     r0, r0, #0x40000000 @ Limpa bit 30
+    str     r0, [r4]
 
-@ --- imprimir_matriz_resultado ---
-@ Argumentos:
-@   r0: matrizC (ponteiro para a matriz 5x5)
+    cmp     r7, #25
+    movgt   r0, #25
+    movle   r0, r7
+    mov     r1, #25
+    bl      print_progress_bar
+
+    ldr     r0, =100000
+    bl      usleep
+
+    b       receive_loop
+
+receive_done:
+    pop     {r4-r11, pc}
+
+@ void imprimir_matriz_resultado(uint8_t matrizC[5][5])
 imprimir_matriz_resultado:
-    PUSH    {r4-r6, lr}
-    MOV     r4, r0                 @ r4 = matrizC
-    MOV     r5, #0                 @ i = 0
+    push    {r4-r6, lr}
+    mov     r4, r0              @ matrizC
+    mov     r5, #0              @ i = 0
 
-print_loop:
-    MOV     r6, #0                 @ j = 0
-    row_loop:
-        @ Calcula endereço do elemento matrizC[i][j]
-        MLA     r0, r5, #5, r6     @ r0 = i*5 + j
-        LDRB    r0, [r4, r0]       @ r0 = matrizC[i][j]
+outer_loop:
+    cmp     r5, #5
+    bge     print_done
+    mov     r6, #0              @ j = 0
 
-        @ Imprime valor (chamada ao printf em C)
-        LDR     r1, =format_str
-        BL      printf
-        ADD     r6, r6, #1
-        CMP     r6, #5
-        BLT     row_loop
+inner_loop:
+    cmp     r6, #5
+    bge     inner_done
 
-    @ Imprime nova linha
-    LDR     r0, =newline
-    BL      puts
+    mov     r0, r5
+    mov     r1, #5
+    mla     r0, r0, r1, r6      @ i*5 + j
+    ldrb    r1, [r4, r0]        @ matrizC[i][j]
 
-    ADD     r5, r5, #1
-    CMP     r5, #5
-    BLT     print_loop
+    ldr     r0, =format_str
+    bl      printf
 
-    POP     {r4-r6, pc}
+    add     r6, r6, #1
+    b       inner_loop
+
+inner_done:
+    ldr     r0, =newline_str
+    bl      printf
+
+    add     r5, r5, #1
+    b       outer_loop
+
+print_done:
+    pop     {r4-r6, pc}
 
 .section .rodata
 format_str: .asciz "%3d "
-newline:    .asciz ""
+newline_str: .asciz "\n"
