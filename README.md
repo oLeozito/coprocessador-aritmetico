@@ -39,13 +39,19 @@ FAZER
 
 A biblioteca contém funções escritas em Assembly ARM que se comunicam com os registradores do coprocessador de multiplicação matricial mapeado na FPGA.
 
-### 📌 Funções Implementadas (CORRIGIR NOME)
+### 📌 Funções Implementadas 
 
 - `enviar_dados_para_FPGA`: Envia os dados para a FPGA.
 - `receber_dados_da_FPGA`: Recebe os dados do FPGA.
 - `configurar_mapeamento`: Configura o mapeamento de memória da ponte (Lightweight Bridge).
 
 Cada função é responsável por acessar diretamente os endereços mapeados da FPGA via ponte HPS–FPGA.
+
+####`enviar_dados_para_FPGA`
+
+####`receber_dados_para_FPGA`
+
+####`configurar_mapeamento`
 
 ---
 
@@ -89,7 +95,7 @@ Critérios de validação:
 
 ---
 
-## 🔍 Mapeamento de Memória (exemplo)
+## 🔍 Mapeamento de Memória 
 
 | Endereço (hex)  | Registrador        | Descrição                         |
 |------------------|---------------------|-------------------------------------|
