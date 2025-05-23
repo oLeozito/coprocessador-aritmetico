@@ -129,7 +129,6 @@ Critérios de validação:
 
 - Correção dos resultados;
 - Tolerância a entradas inválidas;
-- Comparação de desempenho (tempo com/sem coprocessador).
 
 ---
 
