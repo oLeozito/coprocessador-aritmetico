@@ -139,7 +139,6 @@ Critérios de validação:
 | `0xFF200000`     | `LEDR_ptr`          | Endereço de ida da ponte            |
 | `0xFF200010`     | `RETURN_ptr`        | Endereço volta da ponte             |
 
-> CONFERIR ENDEREÇOS
 
 ---
 
