@@ -3,11 +3,7 @@
 #include <sys/mman.h>
 #include <unistd.h>
 #include <stdint.h>
-#include <unistd.h>
 #include "package.h"
-#include <unistd.h>
-
-
 
 #define LW_BRIDGE_BASE   0xFF200000
 #define LW_BRIDGE_SPAN   0x00005000
@@ -33,30 +29,14 @@ void print_progress_bar(int current, int total) {
     fflush(stdout);
 }
 
-// void* configurar_mapeamento(int *fd) {
-//     *fd = open("/dev/mem", (O_RDWR | O_SYNC));
-//     if (*fd == -1) {
-//         printf("ERRO: não foi possível abrir \"/dev/mem\"...\n");
-//         return NULL;
-//     }
-
-//     void *virtual = mmap(NULL, LW_BRIDGE_SPAN, (PROT_READ | PROT_WRITE),
-//                          MAP_SHARED, *fd, LW_BRIDGE_BASE);
-//     if (virtual == MAP_FAILED) {
-//         printf("ERRO: mmap() falhou...\n");
-//         close(*fd);
-//         return NULL;
-//     }
-
-//     return virtual;
-// }
-
-
-void imprimir_matriz_resultado(uint8_t matrizC[5][5]) {
+void imprimir_matriz_resultado(uint8_t vetorC[25], uint8_t matrix_size_bits) {
     printf("Matriz Resultante:\n");
-    for (int i = 0; i < 5; i++) {
-        for (int j = 0; j < 5; j++) {
-            printf("%3d ", matrizC[i][j]);
+
+    int tamanho = matrix_size_bits + 2; // 00->2x2, 01->3x3, 10->4x4, 11->5x5
+    for (int linha = 0; linha < tamanho; linha++) {
+        for (int coluna = 0; coluna < tamanho; coluna++) {
+            // Cast para int8_t para interpretar corretamente valores negativos
+            printf("%4d ", (int8_t)vetorC[linha * 5 + coluna]);
         }
         printf("\n");
     }
@@ -67,14 +47,11 @@ int main(void) {
     void *LW_virtual = configurar_mapeamento(&fd);
     if (LW_virtual == NULL) return -1;
 
-    // Ponteiro base da FPGA (LEDR)
     volatile uint32_t *LEDR_ptr = (uint32_t *)(LW_virtual + LEDR_BASE);
 
-    // Configura os sinais de controle
-    *LEDR_ptr |= (1 << 29);     // Ativa coprocessador
-    *LEDR_ptr &= ~(1 << 31);    // Garante que o bit de "start" esteja zerado
+    *LEDR_ptr |= (1 << 29);
+    *LEDR_ptr &= ~(1 << 31);
 
-    // Matrizes de entrada
     uint8_t matrizA[5][5] = {
         {1, 2, 3, 4, 5},
         {6, 7, 8, 9, 10},
@@ -91,9 +68,8 @@ int main(void) {
         {5, 4, 3, 2, 1}
     };
 
-    uint8_t matrizC[5][5]; // Resultado
+    uint8_t vetorC[25]; // Resultado linearizado
 
-    // Menu de seleção
     printf("Selecione a operação desejada:\n");
     printf("0 = Soma\n");
     printf("1 = Subtração\n");
@@ -114,16 +90,14 @@ int main(void) {
         return -1;
     }
 
-    uint8_t tamanho = 0b000;          // Tamanho fixo 5x5
-    uint8_t opcode  = (uint8_t) op;   // 3 bits de operação
-    uint8_t data = (tamanho << 3) | (opcode & 0b111);
+    uint8_t matrix_size_bits = 0b00;       // 5x5 (00->2x2, ..., 11->5x5)
+    uint8_t opcode = (uint8_t)op;
+    uint8_t data = (matrix_size_bits << 3) | (opcode & 0b111);
 
-    // Envia dados para a FPGA
     enviar_dados_para_fpga(LEDR_ptr, matrizA, matrizB, data);
-    receber_dados_da_fpga(LEDR_ptr, matrizC);
-    imprimir_matriz_resultado(matrizC);
+    receber_dados_da_fpga(LEDR_ptr, vetorC);
+    imprimir_matriz_resultado(vetorC, matrix_size_bits);
 
-    // Finaliza mapeamento
     munmap(LW_virtual, LW_BRIDGE_SPAN);
     close(fd);
     return 0;
