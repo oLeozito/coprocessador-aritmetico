@@ -47,7 +47,7 @@ A biblioteca contém funções escritas em Assembly ARM que se comunicam com os 
 
 Cada função é responsável por acessar diretamente os endereços mapeados da FPGA via ponte HPS–FPGA.
 
-#### Módulo `enviar_dados_para_FPGA`
+#### Função `enviar_dados_para_FPGA`
 
 Este módulo, implementado em Assembly para ARM (Thumb), é responsável por enviar dados das matrizes A e B para a FPGA, um elemento comum em sistemas embarcados com coprocessadores personalizados. A função recebe como parâmetros os ponteiros para a base dos registradores de controle da FPGA (LEDR_ptr), as duas matrizes 5x5 (matrizA e matrizB) e um byte de controle (data).
 
@@ -69,7 +69,7 @@ A função utiliza otimizações como divisão inteira por 5 com multiplicação
 
 Esse módulo é essencial para a comunicação eficaz entre o processador ARM e a lógica configurável da FPGA, garantindo envio ordenado, seguro e sincronizado dos dados.
 
-#### Módulo `receber_dados_para_FPGA`
+#### Função `receber_dados_para_FPGA`
 
 Este módulo, implementado em Assembly ARM, é responsável por realizar a leitura dos dados provenientes da FPGA e armazená-los em uma matriz 5x5 (representada por matrizC). Os dados são recebidos em blocos de 24 bits, sendo três elementos de 8 bits por ciclo de leitura. O processo segue uma lógica de sincronização utilizando o bit 30 de um registrador de controle (RETURN_ptr) para indicar quando há dados válidos prontos para leitura e quando a FPGA reconheceu a leitura.
 
@@ -89,7 +89,7 @@ O fluxo principal do módulo inclui:
 
 O módulo faz uso de instruções específicas para cálculo eficiente de divisões por 5 (para calcular linha e coluna), manipulação de bits, e sincronização com hardware externo, demonstrando integração direta entre o processador ARM e a FPGA no sistema embarcado DE1-SoC.
 
-#### `configurar_mapeamento`
+#### Função `configurar_mapeamento`
 
 ---
 
