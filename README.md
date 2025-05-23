@@ -41,11 +41,9 @@ A biblioteca contém funções escritas em Assembly ARM que se comunicam com os 
 
 ### 📌 Funções Implementadas (CORRIGIR NOME)
 
-- `matrix_write_operand_A`: Escreve os dados da matriz A no registrador correspondente.
-- `matrix_write_operand_B`: Escreve os dados da matriz B no registrador correspondente.
-- `matrix_start_multiplication`: Dispara o início da multiplicação.
-- `matrix_wait_done`: Aguarda a conclusão do processamento via polling.
-- `matrix_read_result`: Lê os resultados da multiplicação.
+- `enviar_dados_para_FPGA`: Envia os dados para a FPGA.
+- `receber_dados_da_FPGA`: Recebe os dados do FPGA.
+- `configurar_mapeamento`: Configura o mapeamento de memória da ponte (Lightweight Bridge).
 
 Cada função é responsável por acessar diretamente os endereços mapeados da FPGA via ponte HPS–FPGA.
 
@@ -95,11 +93,8 @@ Critérios de validação:
 
 | Endereço (hex)  | Registrador        | Descrição                         |
 |------------------|---------------------|-------------------------------------|
-| `0xFF200000`     | `MAT_A_BASE`        | Endereço base da matriz A          |
-| `0xFF200010`     | `MAT_B_BASE`        | Endereço base da matriz B          |
-| `0xFF200020`     | `START`             | Início da multiplicação            |
-| `0xFF200030`     | `STATUS`            | Status da operação (0 ou 1)        |
-| `0xFF200040`     | `RESULT_BASE`       | Base da matriz de resultado        |
+| `0xFF200000`     | `LEDR_ptr`          | Endereço de ida da ponte            |
+| `0xFF200010`     | `RETURN_ptr`        | Endereço volta da ponte             |
 
 > CONFERIR ENDEREÇOS
 
@@ -116,9 +111,9 @@ Critérios de validação:
 
 ## 👥 Equipe
 
-- João Marcelo
-- Leonardo
-- João Gabriel
+- João Marcelo Nascimento Fernandes
+- Leonardo Oliveira Almeida da Cruz
+- João Gabriel Santos Silva
 
 ---
 
