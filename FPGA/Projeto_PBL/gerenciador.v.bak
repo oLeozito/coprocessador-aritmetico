@@ -1,0 +1,87 @@
+module gerencia(
+    input clk,
+    input reset,
+    input [31:0] entrada,
+    output reg [31:0] saida
+);
+
+    // Definição dos estados
+    parameter ESPERA = 1'b0, LEITURA = 1'b1;
+    reg estado_atual, proximo_estado;
+
+    reg [4:0] indice;  // Vai de 0 a 24
+    reg [2:0] opcode;
+    reg [7:0] matrizA [0:24];
+    reg [7:0] matrizB [0:24];
+    reg leu; // Flag para controlar leitura única
+
+    wire [7:0] valA = entrada[7:0];
+    wire [7:0] valB = entrada[15:8];
+    wire [2:0] op = entrada[18:16];
+    wire flag_HPS = entrada[31];
+
+    // Estado atual
+    always @(posedge clk or posedge reset) begin
+        if (reset) begin
+            estado_atual <= ESPERA;
+        end else begin
+            estado_atual <= proximo_estado;
+        end
+    end
+
+    // Lógica de transição de estados
+    always @(*) begin
+        case (estado_atual)
+            ESPERA: begin
+                if (flag_HPS)
+                    proximo_estado = LEITURA;
+                else
+                    proximo_estado = ESPERA;
+            end
+
+            LEITURA: begin
+                if (!flag_HPS)
+                    proximo_estado = ESPERA;
+                else
+                    proximo_estado = LEITURA;
+            end
+
+            default: proximo_estado = ESPERA;
+        endcase
+    end
+
+    // Lógica sequencial principal
+    always @(posedge clk or posedge reset) begin
+        if (reset) begin
+            saida <= 0;
+            indice <= 0;
+            leu <= 0;
+        end else begin
+            case (estado_atual)
+                ESPERA: begin
+                    saida[31] <= 0; // Sinaliza "ainda não leu"
+                    leu <= 0;
+                end
+
+                LEITURA: begin
+                    if (!leu) begin
+                        matrizA[indice] <= valA;
+                        matrizB[indice] <= valB;
+                        opcode <= op;
+                        saida[31] <= 1; // Sinaliza "leitura concluída"
+                        leu <= 1;
+                    end
+
+                    // Quando flag da entrada volta pra 0
+                    if (!flag_HPS) begin
+                        if (indice == 24)
+                            indice <= 0;
+                        else
+                            indice <= indice + 1;
+                    end
+                end
+            endcase
+        end
+    end
+
+endmodule
