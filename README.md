@@ -69,7 +69,25 @@ A função utiliza otimizações como divisão inteira por 5 com multiplicação
 
 Esse módulo é essencial para a comunicação eficaz entre o processador ARM e a lógica configurável da FPGA, garantindo envio ordenado, seguro e sincronizado dos dados.
 
-#### `receber_dados_para_FPGA`
+#### Módulo `receber_dados_para_FPGA`
+
+Este módulo, implementado em Assembly ARM, é responsável por realizar a leitura dos dados provenientes da FPGA e armazená-los em uma matriz 5x5 (representada por matrizC). Os dados são recebidos em blocos de 24 bits, sendo três elementos de 8 bits por ciclo de leitura. O processo segue uma lógica de sincronização utilizando o bit 30 de um registrador de controle (RETURN_ptr) para indicar quando há dados válidos prontos para leitura e quando a FPGA reconheceu a leitura.
+
+O fluxo principal do módulo inclui:
+
+1. nicialização de ponteiros e mensagens ao usuário.
+
+2. Loop de recepção que percorre todos os 25 elementos da matriz.
+
+3. A cada iteração, lê um valor de 24 bits da FPGA e distribui seus 3 bytes consecutivos nas posições corretas da matriz.
+
+4. No final de cada leitura, confirma a recepção para a FPGA e espera o acknowledgment.
+
+5. Atualiza uma barra de progresso visual para indicar o avanço da transferência.
+
+6. Após concluir a leitura de todos os dados, imprime uma mensagem final e retorna.
+
+O módulo faz uso de instruções específicas para cálculo eficiente de divisões por 5 (para calcular linha e coluna), manipulação de bits, e sincronização com hardware externo, demonstrando integração direta entre o processador ARM e a FPGA no sistema embarcado DE1-SoC.
 
 #### `configurar_mapeamento`
 
