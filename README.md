@@ -162,7 +162,7 @@ Critérios de validação:
 
 ---
 
-## 📖 Referências
+## 📖 Bibliografia
 
 - Manual da DE1-SoC 
 - [MaJerle Code Style Guide](https://github.com/MaJerle/c-code-style)  
