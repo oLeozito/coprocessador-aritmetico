@@ -75,17 +75,17 @@ Este módulo, implementado em Assembly ARM, é responsável por realizar a leitu
 
 O fluxo principal do módulo inclui:
 
-1. nicialização de ponteiros e mensagens ao usuário.
+1. Inicialização de ponteiros e mensagens ao usuário.
 
-2. Loop de recepção que percorre todos os 25 elementos da matriz.
+3. Loop de recepção que percorre todos os 25 elementos da matriz.
 
-3. A cada iteração, lê um valor de 24 bits da FPGA e distribui seus 3 bytes consecutivos nas posições corretas da matriz.
+4. A cada iteração, lê um valor de 24 bits da FPGA e distribui seus 3 bytes consecutivos nas posições corretas da matriz.
 
-4. No final de cada leitura, confirma a recepção para a FPGA e espera o acknowledgment.
+5. No final de cada leitura, confirma a recepção para a FPGA e espera o acknowledgment.
 
-5. Atualiza uma barra de progresso visual para indicar o avanço da transferência.
+6. Atualiza uma barra de progresso visual para indicar o avanço da transferência.
 
-6. Após concluir a leitura de todos os dados, imprime uma mensagem final e retorna.
+7. Após concluir a leitura de todos os dados, imprime uma mensagem final e retorna.
 
 O módulo faz uso de instruções específicas para cálculo eficiente de divisões por 5 (para calcular linha e coluna), manipulação de bits, e sincronização com hardware externo, demonstrando integração direta entre o processador ARM e a FPGA no sistema embarcado DE1-SoC.
 
