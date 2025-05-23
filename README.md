@@ -41,13 +41,33 @@ A biblioteca contém funções escritas em Assembly ARM que se comunicam com os 
 
 ### 📌 Funções Implementadas 
 
-- `enviar_dados_para_FPGA`: Envia os dados para a FPGA.
-- `receber_dados_da_FPGA`: Recebe os dados do FPGA.
-- `configurar_mapeamento`: Configura o mapeamento de memória da ponte (Lightweight Bridge).
+- `enviar_dados_para_FPGA`
+- `receber_dados_da_FPGA`
+- `configurar_mapeamento`
 
 Cada função é responsável por acessar diretamente os endereços mapeados da FPGA via ponte HPS–FPGA.
 
-#### `enviar_dados_para_FPGA`
+#### Módulo `enviar_dados_para_FPGA`
+
+Este módulo, implementado em Assembly para ARM (Thumb), é responsável por enviar dados das matrizes A e B para a FPGA, um elemento comum em sistemas embarcados com coprocessadores personalizados. A função recebe como parâmetros os ponteiros para a base dos registradores de controle da FPGA (LEDR_ptr), as duas matrizes 5x5 (matrizA e matrizB) e um byte de controle (data).
+
+O envio é feito célula a célula (25 no total), obedecendo o seguinte protocolo:
+
+1. Sincronização com a FPGA: antes de cada envio, o processador verifica se a FPGA está pronta (bit 31 de um registrador de status deve estar em 0).
+
+2. Formação da palavra de controle: para cada par de elementos correspondentes nas matrizes A e B, é construída uma palavra de 32 bits no formato:
+   ```bash
+    word = valA | (valB << 8) | (data << 16)
+    ```
+3. Envio e sinalização: essa palavra é escrita no registrador da FPGA e o bit 31 é setado para indicar que há novos dados.
+
+4. Confirmação: o sistema aguarda até a FPGA confirmar a leitura, setando o bit 31 do registrador de retorno.
+
+5. Limpeza do sinal e progresso: o bit de controle é limpo e a barra de progresso é atualizada no terminal.
+
+A função utiliza otimizações como divisão inteira por 5 com multiplicação e acesso direto a elementos da matriz por aritmética de ponteiros. Ao final do processo, uma mensagem de confirmação é impressa.
+
+Esse módulo é essencial para a comunicação eficaz entre o processador ARM e a lógica configurável da FPGA, garantindo envio ordenado, seguro e sincronizado dos dados.
 
 #### `receber_dados_para_FPGA`
 
