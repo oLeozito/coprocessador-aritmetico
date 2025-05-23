@@ -47,11 +47,11 @@ A biblioteca contém funções escritas em Assembly ARM que se comunicam com os 
 
 Cada função é responsável por acessar diretamente os endereços mapeados da FPGA via ponte HPS–FPGA.
 
-####`enviar_dados_para_FPGA`
+#### `enviar_dados_para_FPGA`
 
-####`receber_dados_para_FPGA`
+#### `receber_dados_para_FPGA`
 
-####`configurar_mapeamento`
+#### `configurar_mapeamento`
 
 ---
 
