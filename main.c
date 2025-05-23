@@ -71,7 +71,7 @@ int main(void) {
     volatile uint32_t *LEDR_ptr = (uint32_t *)(LW_virtual + LEDR_BASE);
 
     // Configura os sinais de controle
-    *LEDR_ptr |= (1 << 29);     // (ex: ativa coprocessador)
+    *LEDR_ptr |= (1 << 29);     // Ativa coprocessador
     *LEDR_ptr &= ~(1 << 31);    // Garante que o bit de "start" esteja zerado
 
     // Matrizes de entrada
@@ -86,19 +86,39 @@ int main(void) {
     uint8_t matrizB[5][5] = {
         {25, 24, 23, 22, 21},
         {20, 19, 18, 17, 16},
-        {15, 14, 13, 12, 11},0
+        {15, 14, 13, 12, 11},
+        {10, 9, 8, 7, 6},
+        {5, 4, 3, 2, 1}
     };
 
     uint8_t matrizC[5][5]; // Resultado
 
-    // Define o valor de "data"
-    // Exemplo: tamanho = 0b000 (5x5 = fixo), opcode = 0b010 (multiplicação)
-    // Então: data = (tamanho << 3) | opcode
-    uint8_t tamanho = 0b000;  // 3 bits
-    uint8_t opcode  = 0b000;  // 3 bits
+    // Menu de seleção
+    printf("Selecione a operação desejada:\n");
+    printf("0 = Soma\n");
+    printf("1 = Subtração\n");
+    printf("2 = Oposta\n");
+    printf("3 = Multiplicação\n");
+    printf("4 = Transposição\n");
+    printf("5 = Determinante\n");
+    printf("6 = Multiplicação por inteiro\n");
+    printf("Digite o código da operação (0-6): ");
+
+    int op;
+    scanf("%d", &op);
+
+    if (op < 0 || op > 6) {
+        printf("Operação inválida.\n");
+        munmap(LW_virtual, LW_BRIDGE_SPAN);
+        close(fd);
+        return -1;
+    }
+
+    uint8_t tamanho = 0b000;          // Tamanho fixo 5x5
+    uint8_t opcode  = (uint8_t) op;   // 3 bits de operação
     uint8_t data = (tamanho << 3) | (opcode & 0b111);
 
-    // Envia dados para a FPGA (apenas ponteiro base e data são passados)
+    // Envia dados para a FPGA
     enviar_dados_para_fpga(LEDR_ptr, matrizA, matrizB, data);
     receber_dados_da_fpga(LEDR_ptr, matrizC);
     imprimir_matriz_resultado(matrizC);
