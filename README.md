@@ -44,7 +44,7 @@ HPS
 
 ### Descrição dos Arquivos
 
-- Makefile:
+- Makefile: Responsável
   
 - Package.c:
   
