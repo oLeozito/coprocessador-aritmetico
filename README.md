@@ -36,7 +36,7 @@ FPGA
  └── (Coprocessador aritmetico)
 HPS
  └── Makefile
- └── Package.c
+ └── main.c
  └── Package.h
  └── Package.s
 
@@ -44,11 +44,11 @@ HPS
 
 ### Descrição dos Arquivos
   
-- Package.c:
+- main.c:
   
 - Package.h:
   
-- Package.s:
+- Package.s: Trata-se da biblioteca assembly, que tem como função enviar e receber dados entre o processador ARM e o coprocessador na FPGA, manipulando dados de matrizes para operações aritméticas.
   
 
 ---
@@ -152,7 +152,7 @@ CORRiGIR
 
 ```bash
 as -o package.o package.s
-gcc -o programa package.c package.o
+gcc -o programa main.c package.o
 ./programa
 ```
 
