@@ -43,8 +43,6 @@ HPS
 ```
 
 ### Descrição dos Arquivos
-
-- Makefile: Responsável
   
 - Package.c:
   
@@ -153,10 +151,9 @@ Esse tipo de abordagem é típica em aplicações embarcadas de baixo nível, on
 CORRiGIR
 
 ```bash
-make
-scp main root@<IP_DA_FPGA>:/home/root/
-ssh root@<IP_DA_FPGA>
-./main
+as -o package.o package.s
+gcc -o programa package.c package.o
+./programa
 ```
 
 ---
