@@ -24,7 +24,6 @@ A biblioteca facilita a utilização da aceleração em hardware para aplicaçõ
 | VS Code + Extensões      | Edição de código e integração com toolchain          |
 | `arm-linux-gnueabihf-*`  | Assembler e linker para código Assembly ARM           |
 | SCP/SSH                  | Transferência e execução de arquivos no HPS           |
-| Make                     | Automação da compilação com `Makefile`                |
 | GitHub                   | Repositório de código e documentação                  |
 
 ---
