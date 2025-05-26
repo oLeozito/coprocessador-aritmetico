@@ -44,13 +44,12 @@ HPS
 
 ### Descrição dos Arquivos
   
-- main.c:
+- main.c: Controlar a comunicação entre o ARM e a FPGA para enviar duas matrizes, selecionar uma operação (como soma, multiplicação, etc.), receber o resultado da FPGA e exibir a matriz resultante no terminal.
   
 - Package.h: Declara as funções utilizadas para comunicação entre o processador ARM e a FPGA, além de utilitários auxiliares.
   
 - Package.s: Trata-se da biblioteca assembly, que tem como função enviar e receber dados entre o processador ARM e o coprocessador na FPGA, manipulando dados de matrizes para operações aritméticas.
   
-
 ---
 
 ## 📚 Descrição da Biblioteca
