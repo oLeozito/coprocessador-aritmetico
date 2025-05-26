@@ -111,6 +111,33 @@ O módulo faz uso de instruções específicas para cálculo eficiente de divis�
 
 #### 📝 Função `configurar_mapeamento`
 
+Essa função tem como objetivo estabelecer o mapeamento de uma região da memória física do sistema no espaço de endereçamento virtual do processo em execução. Isso é essencial para possibilitar o acesso direto ao hardware por meio de ponteiros em C ou Assembly, como é comum em sistemas embarcados e aplicações de baixo nível.
+
+A função realiza os seguintes passos:
+
+1. Abertura do arquivo especial /dev/mem: Utiliza a chamada de sistema open() com as flags O_RDWR | O_SYNC para abrir o dispositivo /dev/mem, que representa a memória física do sistema. Essa abertura retorna um file descriptor (fd), que é salvo em uma variável cujo ponteiro é passado como parâmetro (r0). Caso a abertura falhe (fd == -1), a função exibe uma mensagem de erro e retorna NULL.
+
+2. Mapeamento com mmap(): Com o file descriptor válido, a função chama mmap() para mapear uma região de 20 KB (0x5000 bytes), a partir do endereço físico 0xFF000000, para o espaço de endereçamento virtual do processo.
+Os parâmetros usados são:
+
+ - addr = NULL: permite ao kernel escolher o endereço virtual.
+ 
+ - length = 20480: define o tamanho da área a ser mapeada.
+ 
+ - prot = PROT_READ | PROT_WRITE: permite leitura e escrita na área mapeada.
+ 
+ - flags = MAP_SHARED: permite que modificações na memória mapeada sejam visíveis por outros processos.
+ 
+ - fd: descritor do /dev/mem.
+ 
+ - offset = 0xFF000000: endereço físico a partir do qual o mapeamento começa.
+
+O ponteiro virtual retornado por mmap() é salvo e, caso seja igual a MAP_FAILED (geralmente -1), a função trata o erro: imprime uma mensagem e fecha o arquivo aberto anteriormente com close().
+
+3. Retorno: A função retorna o ponteiro virtual correspondente à memória mapeada, permitindo acesso direto à região de hardware mapeada. Se qualquer etapa falhar, retorna NULL.
+
+Esse tipo de abordagem é típica em aplicações embarcadas de baixo nível, onde é necessário configurar ou monitorar dispositivos periféricos acessando diretamente registradores mapeados em memória.
+
 ---
 
 ## ⚙️ Compilação e Execução
