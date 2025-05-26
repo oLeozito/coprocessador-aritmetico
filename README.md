@@ -46,7 +46,7 @@ HPS
   
 - main.c:
   
-- Package.h:
+- Package.h: Declara as funções utilizadas para comunicação entre o processador ARM e a FPGA, além de utilitários auxiliares.
   
 - Package.s: Trata-se da biblioteca assembly, que tem como função enviar e receber dados entre o processador ARM e o coprocessador na FPGA, manipulando dados de matrizes para operações aritméticas.
   
